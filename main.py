@@ -28,6 +28,8 @@ WARM_STEPS = 50_000         # Number of steps to fill the replay memory before t
 MAX_STEPS = 50_000_000
 EVALUATE_FREQ = 100_000
 
+PR_SCALE = 0.7
+
 rand = random.Random()
 rand.seed(GLOBAL_SEED)
 new_seed = lambda: rand.randint(0, 1000_000)
@@ -72,7 +74,7 @@ for step in progressive:
         # The agent will then sample a batch of transitions from the replay memory
         # It generates Qopt and Q'opt from the policy and target networks respectively
         # And then it updates the policy network using the loss function
-        agent.learn(memory, BATCH_SIZE)
+        agent.learn(memory, BATCH_SIZE, PR_SCALE)
 
     if step % TARGET_UPDATE == 0:
         # For every TARGET_UPDATE steps, update the target network by copying the policy network
