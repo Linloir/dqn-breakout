@@ -31,28 +31,32 @@ HTML_TEMPLATE = """<video alt="{alt}" autoplay loop controls style="height: 400p
 
 
 class MyEnv(object):
-
+    
     def __init__(self, device: TorchDevice) -> None:
-        env_raw = make_atari("BreakoutNoFrameskip-v4")
-        self.__env_train = wrap_deepmind(env_raw, episode_life=True)
-        env_raw = make_atari("BreakoutNoFrameskip-v4")
-        self.__env_eval = wrap_deepmind(env_raw, episode_life=True)
-        self.__env = self.__env_train
-        self.__device = device
+        # Initialize the environment
+        env_raw = make_atari("BreakoutNoFrameskip-v4")  # Create the environment for training
+        self.__env_train = wrap_deepmind(env_raw, episode_life=True)    # Wrap the training environment with the DeepMind wrapper, specifying that the episode should end when the life is lost
+        env_raw = make_atari("BreakoutNoFrameskip-v4")  # Create another environment for testing
+        self.__env_eval = wrap_deepmind(env_raw, episode_life=True)     # Wrap the evaluation environment with the DeepMind wrapper, specifying that the episode should end when the life is lost
+        self.__env = self.__env_train                                   # Set the environment to the training environment
+        self.__device = device                                          # Set the device to use for the tensors
 
     def reset(
             self,
             render: bool = False,
     ) -> Tuple[List[TensorObs], float, List[GymImg]]:
         """reset resets and initializes the underlying gym environment."""
-        self.__env.reset()
-        init_reward = 0.
-        observations = []
-        frames = []
-        for _ in range(5): # no-op
-            obs, reward, done = self.step(0)
-            observations.append(obs)
-            init_reward += reward
+        # Reset the environment in order to start a new episode
+        self.__env.reset()  # Reset the environment to the start of an episode
+        init_reward = 0.    # Initialize the reward to 0
+        observations = []   # Initialize the list of observations, each observation is a 4-frame stack
+        frames = []         # Initialize the list of frames, each frame is a 210x160x3 image, which is used for rendering
+        for _ in range(5):
+            # no-op, which means that the agent does nothing for 5 frames
+            # this is necessary to initialize the 4-frame stack which is constructed out of the observations
+            obs, reward, done = self.step(0)    # Perform a no-op action
+            observations.append(obs)            # Append the observation to the list of observations
+            init_reward += reward               # Add the reward to the initial reward
             if done:
                 return self.reset(render)
             if render:
@@ -65,8 +69,8 @@ class MyEnv(object):
         observation, the reward, and an bool value indicating whether the
         episode is terminated."""
         action = action + 1 if not action == 0 else 0
-        obs, reward, done, _ = self.__env.step(action)
-        return self.to_tensor(obs), reward, done
+        obs, reward, done, _ = self.__env.step(action)  # Perform the action in the environment
+        return self.to_tensor(obs), reward, done        # Return the observation as a tensor, the reward, and the done flag
 
     def get_frame(self) -> GymImg:
         """get_frame renders the current game frame."""
@@ -97,6 +101,7 @@ class MyEnv(object):
     @staticmethod
     def make_state(obs_queue: deque) -> TensorStack4:
         """make_state makes up a state given an obs queue."""
+        # Concatenate the observations in the queue to form a state, which is a 4-frame stack
         return torch.cat(list(obs_queue)[1:]).unsqueeze(0)
 
     @staticmethod
